@@ -74,7 +74,7 @@ class Pinote(object):
     @PinoteError.error_handler()
     def get_note_html(self, note_id):
         r = self.__session.get(
-            'https://notes.pinboard.in/u:hyshai/notes/{}'.format(note_id))
+            'https://notes.pinboard.in/u:{}/notes/{}'.format(self.username, note_id))
         r.raise_for_status()
         html = r.text
         soup = BeautifulSoup(html, "lxml")
@@ -90,8 +90,8 @@ class Pinote(object):
             'note': note,
             'use_markdown': 'on' if use_markdown else 'off'
         }
-        r = self.__session.post('https://notes.pinboard.in/u:hyshai/notes/{}/edit/'
-                                .format(note_id), data=data, headers=HEADERS)
+        r = self.__session.post('https://notes.pinboard.in/u:{}/notes/{}/edit/'
+                                .format(self.username, note_id), data=data, headers=HEADERS)
         r.raise_for_status()
 
     @PinoteError.error_handler()
