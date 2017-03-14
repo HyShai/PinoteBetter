@@ -1,11 +1,24 @@
-import exceptions
-
+from functools import wraps
 import requests
 from bs4 import BeautifulSoup
 
-PINBOARD_API_ENDPOINT = 'https://api.pinboard.in/v1/'
-PINBOARD_NOTES_ENDPOINT = 'https://notes.pinboard.in/'
 HEADERS = {'User-Agent': 'Pinote-Better.py'}
+
+
+class PinoteError(Exception):
+
+    @staticmethod
+    def error_handler(msg=''):
+        def error_handler_decorator(func):
+            @wraps(func)
+            def func_wrapper(*args, **kwargs):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    raise PinoteError("Error while executing '{}' -- {}\n{}"
+                                      .format(func.func_name, repr(e), msg))
+            return func_wrapper
+        return error_handler_decorator
 
 
 class Pinote(object):
@@ -26,9 +39,15 @@ class Pinote(object):
 
     def __login(self):
         self._cached_session = requests.Session()
-        self._cached_session.post(
-            'https://pinboard.in/auth/', data=self.post_auth, headers=HEADERS)
+        r = self._cached_session.post(
+            'https://pinboard.in/auth/', data=self.post_auth,
+            headers=HEADERS, allow_redirects=False)
+        r.raise_for_status()
+        if 'error' in r.headers.get("location"):
+            self._cached_session = None
+            raise Exception('Invalid login')
 
+    @PinoteError.error_handler()
     def add_note(self, title, note, tags, use_markdown=False, public=False):
         visibility = 'public' if public else 'private'
         data = {
@@ -40,21 +59,29 @@ class Pinote(object):
             'action': 'save_' + visibility
         }
 
-        self.__session.post('https://pinboard.in/note/add/',
-                            data=data, headers=HEADERS)
+        r = self.__session.post('https://pinboard.in/note/add/',
+                                data=data, headers=HEADERS,
+                                allow_redirects=False)
+        r.raise_for_status()
 
+    @PinoteError.error_handler()
     def get_all_notes(self):
-        notes = requests.get('https://api.pinboard.in/v1/notes/list?format=json',
-                             auth=self.basic_auth)
-        return notes.json()
+        r = requests.get('https://api.pinboard.in/v1/notes/list?format=json',
+                         auth=self.basic_auth)
+        r.raise_for_status()
+        return r.json()
 
+    @PinoteError.error_handler()
     def get_note_html(self, note_id):
-        html = self.__session.get(
-            'https://notes.pinboard.in/u:hyshai/notes/' + note_id).text
+        r = self.__session.get(
+            'https://notes.pinboard.in/u:hyshai/notes/{}'.format(note_id))
+        r.raise_for_status()
+        html = r.text
         soup = BeautifulSoup(html, "lxml")
         note_html = soup.find('blockquote', {'class': 'note'})
         return note_html
 
+    @PinoteError.error_handler()
     def edit_note(self, title, note, note_id, use_markdown=False):
         data = {
             'slug': note_id,
@@ -63,13 +90,17 @@ class Pinote(object):
             'note': note,
             'use_markdown': 'on' if use_markdown else 'off'
         }
-        self.__session.post('https://notes.pinboard.in/u:hyshai/notes/' +
-                            note_id + '/edit/', data=data, headers=HEADERS)
+        r = self.__session.post('https://notes.pinboard.in/u:hyshai/notes/{}/edit/'
+                                .format(note_id), data=data, headers=HEADERS)
+        r.raise_for_status()
 
+    @PinoteError.error_handler()
     def delete_note(self, note_id):
         if not self._delete_token:
-            html = self.__session.get(
-                'https://notes.pinboard.in', headers=HEADERS).text
+            r = self.__session.get(
+                'https://notes.pinboard.in', headers=HEADERS)
+            r.raise_for_status()
+            html = r.text
             soup = BeautifulSoup(html, "lxml")
             self._delete_token = soup.find(
                 'input', {'name': 'token'}).get('value')
@@ -78,5 +109,6 @@ class Pinote(object):
             'action': 'delete_note',
             'id': note_id
         }
-        self.__session.post('https://notes.pinboard.in/',
-                            data=data, headers=HEADERS)
+        r = self.__session.post('https://notes.pinboard.in/',
+                                data=data, headers=HEADERS)
+        r.raise_for_status()

@@ -55,7 +55,7 @@ Once you've done this, you can now use the `pn` object to access Notes. Here are
 <hr>
 #### TODO:
 
-- [ ] Add exception handling
+- [ x ] Add exception handling
 - [ ] Add a Pythonista GUI (i.e. iOS app)
 
 
