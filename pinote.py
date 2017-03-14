@@ -1,4 +1,5 @@
 from functools import wraps
+import atexit
 import requests
 from bs4 import BeautifulSoup
 
@@ -43,9 +44,16 @@ class Pinote(object):
             'https://pinboard.in/auth/', data=self.post_auth,
             headers=HEADERS, allow_redirects=False)
         r.raise_for_status()
-        if 'error' in r.headers.get("location"):
+        if 'error' in r.headers.get('location'):
             self._cached_session = None
             raise Exception('Invalid login')
+
+    @atexit.register
+    def __del__(self):
+        try:
+            self._cached_session.get('https://pinboard.in/logout/', allow_redirects=False)
+        except Exception:
+            pass
 
     @PinoteError.error_handler()
     def add_note(self, title, note, tags, use_markdown=False, public=False):
