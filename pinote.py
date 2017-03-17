@@ -80,6 +80,13 @@ class Pinote(object):
         return r.json()
 
     @PinoteError.error_handler()
+    def get_note_details(self, note_id):
+        r = requests.get('https://api.pinboard.in/v1/notes/{}?format=json'.format(note_id),
+                         auth=self.basic_auth)
+        r.raise_for_status()
+        return r.json()
+
+    @PinoteError.error_handler()
     def get_note_html(self, note_id):
         r = self.__session.get(
             'https://notes.pinboard.in/u:{}/notes/{}'.format(self.username, note_id))

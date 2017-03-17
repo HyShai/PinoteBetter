@@ -30,6 +30,20 @@ Once you've done this, you can now use the `pn` object to access Notes. Here are
 
 ##### Get a Full Note
 ```python
+>>> pn.get_note_details('1ebd124daf1y82nd0')
+{
+    u'hash': u'47cd8b82d59beby67',
+    u'title': u'my cool note',
+    u'text': u'*note body* more note body',
+    u'created_at': u'2017-03-03 21:00:41',
+    u'updated_at': u'2017-03-03 21:00:41',
+    u'length': 5,
+    u'id': u'1ebd124daf1y82nd0'
+}
+```
+
+##### Get a Note Html
+```python
 >>> pn.get_note_html('1ebd124daf1y82nd0')
 <blockquote class="note">
     <p><b>my cool note</b></p>
